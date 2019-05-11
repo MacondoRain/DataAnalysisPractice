@@ -96,17 +96,100 @@ endtime = time.time()
 wealth = wealth.T
 print('此次模拟用时%.3f秒' % (endtime - starttime))
 
+'''
+4. make graphic
+'''
 
 
+def graphic1(data, start, end, step):
+    for roundi in range(start, end, step):
+        datai = data.iloc[roundi]
+        fig = plt.figure(figsize=(18, 9))
+        plt.bar(datai.index, datai.values,
+                color = 'k', alpha=0.4,
+                edgecolor='k', width=1)
+        plt.xlim(-10, 110)
+        plt.ylim(0, 400)
+        plt.grid(linestyle = '--')
+        plt.title('Round %i' % roundi)
+        plt.ylabel('Wealth')
+        plt.xlabel('Player ID')
+        plt.savefig('./wealth-distribution-simulation/pic1/round %i.png' % roundi)
+        print('绘制第%i轮图表' % roundi)
+
+# 100轮以内，每10轮绘图
+graphic1(wealth, 0, 100, 10)
+
+#100至1000轮，按照每100轮绘制一次柱状图，查看财富变化情况
+graphic1(wealth, 100, 1000, 100)
+
+# 1000至17000轮，按照每400轮绘制一次柱状图，查看财富变化情况
+graphic1(wealth, 1000, 17000, 400)
+
+'''
+5. 制作动图GIF
+'''
+import numpy as np
+
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+import matplotlib.path as path
+import matplotlib.animation as animation
 
 
+#get the corners of the rectangles for the barplot
+left = np.array(range(0,100))
+right = np.array(range(1,101))
+bottom = np.zeros(len(left))
+top = bottom + wealth.iloc[0]
+nrects = len(left)
+
+#set up the vertex and path codes
+# arrays using ``plt.Path.MOVETO``, ``plt.Path.LINETO`` and
+# ``plt.Path.CLOSEPOLY`` for each rect.
+nverts = nrects * (1 + 3 + 1)
+verts = np.zeros((nverts, 2))
+codes = np.ones(nverts, int) * path.Path.LINETO
+codes[0::5] = path.Path.MOVETO
+codes[4::5] = path.Path.CLOSEPOLY
+verts[0::5, 0] = left
+verts[0::5, 1] = bottom
+verts[1::5, 0] = left
+verts[1::5, 1] = top
+verts[2::5, 0] = right
+verts[2::5, 1] = top
+verts[3::5, 0] = right
+verts[3::5, 1] = bottom
+
+patch = None
 
 
+def update(roundi):
+    # update "top"
+    top = bottom + wealth.iloc[roundi]
+    top = top.sort_values()
+    verts[1::5, 1] = top
+    verts[2::5, 1] = top
+    return [patch, ]
+
+# Add the patch to the `Axes` instance, and setup
+# the `FuncAnimation` with our animate function.
+    
+fig, ax = plt.subplots(figsize=(800, 600))
+barpath = path.Path(verts, codes)
+patch = patches.PathPatch(
+    barpath, facecolor='grey', edgecolor='black', alpha=0.5)
+ax.add_patch(patch)
+
+ax.set_xlim(left[0]-10, right[-1]+10)
+ax.set_ylim(bottom.min(), 400)
 
 
+frame = list(np.arange(0, 100, 10)) + list(np.arange(100, 1000, 100)) + list(np.arange(1000, 17000, 400))
 
-
-
+anim = animation.FuncAnimation(fig, update, frames=frame, repeat=False, blit=True)
+plt.show()
+anim.save('./wealth-distribution-sorted.gif',writer='pillow')
 
 
 
